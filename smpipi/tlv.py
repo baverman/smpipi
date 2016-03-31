@@ -10,11 +10,6 @@ INT_TYPES = {
 }
 
 
-class Field(object):
-    def __init__(self, name):
-        self.name = name
-
-
 class IntField(object):
     def __init__(self, name, size):
         self.name = name
