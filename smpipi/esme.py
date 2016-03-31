@@ -34,6 +34,9 @@ class ESME(object):
         self.reply(cmd)
         return self.read()
 
+    def send_message(self, **kwargs):
+        return self.send(command.SubmitSM(**kwargs))
+
     def reply(self, cmd):
         payload = cmd.encode()
         print '>>', cmd.__class__.__name__, payload.encode('hex')
