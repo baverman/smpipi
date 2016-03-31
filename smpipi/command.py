@@ -1,5 +1,5 @@
-from .pdu import (Packet, NString, int8, Field, VarField,
-                  decode_tlv, int32, AttrDict)
+from . import tlv
+from .packet import Packet, NString, int8, Field, VarField, int32, AttrDict
 
 commands = {}
 
@@ -31,9 +31,8 @@ class Command(CommandMeta('CommandBase', (AttrDict,), {})):
             body, offset = cmd.body.decode(buf, offset)
             result.update(body)
 
-            while offset < size:
-                tag, value, offset = decode_tlv(buf, offset)
-                result['_tag_{}'.format(tag)] = value
+            opts, _ = tlv.decode(buf, offset)
+            result.update(opts)
 
         return cmd(**result)
 
@@ -42,6 +41,8 @@ class Command(CommandMeta('CommandBase', (AttrDict,), {})):
         cmd = self.__class__
         if hasattr(cmd, 'body'):
             body = cmd.body.encode(self)
+
+        body += tlv.encode(self)
 
         self['command_length'] = 16 + len(body)
         header = Header.encode(self)

@@ -1,4 +1,4 @@
-from smpipi.pdu import NString, int8, int16, int32, String
+from smpipi.packet import NString, int8, int16, int32, String
 
 
 def test_nstring():

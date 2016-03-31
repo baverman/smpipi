@@ -60,8 +60,6 @@ int32 = Integer('!L')
 int16 = Integer('!H')
 int8 = Integer('!B')
 
-tlv_struct = Struct('!HH')
-
 
 class Field(object):
     counter = 0
@@ -76,6 +74,9 @@ class Field(object):
 
     def decode(self, ctx, buf, offset):
         return self.type.decode(buf, offset)
+
+    def prepare(self, ctx, value):
+        pass
 
     def encode(self, value):
         if value is None:
@@ -92,12 +93,15 @@ class VarField(Field):
     def decode(self, ctx, buf, offset):
         return String(ctx[self.name]).decode(buf, offset)
 
+    def prepare(self, ctx, value):
+        if value is None:
+            value = ''
+        ctx[self.name] = len(value)
 
-def decode_tlv(buf, offset):
-    tag, size = tlv_struct.unpack_from(buf, offset)
-    offset += tlv_struct.size
-    value = buf[offset:offset + size]
-    return tag, value, offset + size
+    def encode(self, value):
+        if value is None:
+            value = ''
+        return str(value)
 
 
 class PacketMeta(type):
@@ -118,6 +122,9 @@ class Packet(PacketMeta('PacketBase', (object,), {})):
     @classmethod
     def encode(cls, data):
         result = ''
+        for name, field in cls.fields:
+            field.prepare(data, data.get(name))
+
         for name, field in cls.fields:
             result += field.encode(data.get(name))
 

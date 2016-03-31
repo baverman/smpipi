@@ -1,4 +1,13 @@
-from .pdu import int8, int16, int32, String
+from struct import Struct
+from .packet import int8, int16, int32
+
+tlv_struct = Struct('!HH')
+
+INT_TYPES = {
+    1: int8,
+    2: int16,
+    3: int32
+}
 
 
 class Field(object):
@@ -8,16 +17,42 @@ class Field(object):
 
 class IntField(object):
     def __init__(self, name, size):
-        pass
+        self.name = name
+        self.size = size
 
     def decode(self, size, value):
-        pass
+        return INT_TYPES[size].decode(value, 0)[0]
 
     def encode(self, value):
-        pass
+        return INT_TYPES[self.size].encode(value)
 
 
-tlv_params = {
+class StrField(object):
+    def __init__(self, name):
+        self.name = name
+
+    def decode(self, size, value):
+        return value
+
+    def encode(self, value):
+        return str(value)
+
+
+class EmptyField(object):
+    def __init__(self, name):
+        self.name = name
+
+    def decode(self, size, value):
+        return ''
+
+    def encode(self, value):
+        return ''
+
+
+NStrField = StrField
+
+
+tags = {
     0x0005: IntField('dest_addr_subunit', 1),
     0x0006: IntField('dest_network_type', 1),
     0x0007: IntField('dest_bearer_type', 1),
@@ -63,3 +98,38 @@ tlv_params = {
     0x1380: IntField('its_reply_type', 1),
     0x1383: StrField('its_session_info'),
 }
+
+names = {field.name: (tag, field) for tag, field in tags.items()}
+
+
+def decode(buf, offset):
+    bufsize = len(buf)
+    result = {}
+    while offset < bufsize:
+        tag, size = tlv_struct.unpack_from(buf, offset)
+        offset += tlv_struct.size
+        value = buf[offset:offset + size]
+        offset += size
+
+        field = tags.get(tag)
+        if field:
+            value = field.decode(size, value)
+            name = field.name
+        else:
+            name = '_tag_{}'.format(hex(tag))
+
+        result[name] = value
+
+    return result, offset
+
+
+def encode(data):
+    result = ''
+    for k, v in data.items():
+        if k in names:
+            tag, field = names[k]
+            value = field.encode(v)
+            size = len(value)
+            result += tlv_struct.pack(tag, size) + value
+
+    return result

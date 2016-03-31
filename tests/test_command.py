@@ -1,4 +1,4 @@
-from smpipi.command import Command, EnquireLink
+from smpipi.command import Command, EnquireLink, SubmitSM
 
 
 def test_simple_command_decode():
@@ -9,8 +9,6 @@ def test_simple_command_decode():
                '0501000101').decode('hex')
 
     result = Command.decode(payload)
-    print result
-    # assert False
     assert result
 
 
@@ -20,5 +18,12 @@ def test_simple_encode():
     assert result == {'command_status': 0,
                       'command_length': 16,
                       'sequence_number': 0,
-                      'command_id': 21,
-                      '_command': 'EnquireLink'}
+                      'command_id': 21}
+
+
+def test_tlv_encode():
+    cmd = SubmitSM(its_session_info='boo', ussd_service_op='16')
+    cmd = Command.decode(cmd.encode())
+
+    assert cmd.its_session_info == 'boo'
+    assert cmd.ussd_service_op == '16'
