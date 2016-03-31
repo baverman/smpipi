@@ -2,7 +2,7 @@ import logging
 import socket
 
 from . import command
-from .pdu import int32
+from .packet import int32
 
 pdu_log = logging.getLogger('smpipi.pdu')
 
