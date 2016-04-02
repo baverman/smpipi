@@ -60,9 +60,13 @@ class ESME(object):
             self.handle(pdu)
 
     def send(self, cmd):
+        self.send_async(cmd)
+        return self.read()
+
+    def send_async(self, cmd):
         cmd.sequence_number = self.next_sequence()
         self.reply(cmd)
-        return self.read()
+        return cmd.sequence_number
 
     def send_message(self, **kwargs):
         return self.send(command.SubmitSM(**kwargs))
