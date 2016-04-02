@@ -13,7 +13,9 @@ class Integer(object):
         self.struct = Struct(fmt)
 
     def encode(self, value):
-        return self.struct.pack(value)
+        if value is None:
+            value = 0
+        return self.struct.pack(int(value))
 
     def decode(self, buf, offset):
         value, = self.struct.unpack_from(buf, offset)
@@ -21,25 +23,27 @@ class Integer(object):
 
 
 class String(object):
-    default = ''
-
-    def __init__(self, size):
-        self.size = size
-
-    def encode(self, value):
-        return str(value)
-
-    def decode(self, buf, offset):
-        return buf[offset:offset+self.size], offset+self.size
-
-
-class NString(object):
-    default = ''
-
     def __init__(self, max):
         self.max = max
 
     def encode(self, value):
+        if value is None:
+            value = ''
+
+        value = str(value)
+        return value, len(value)
+
+    def decode(self, buf, offset, size):
+        return buf[offset:offset+size], offset+size
+
+
+class NString(object):
+    def __init__(self, max):
+        self.max = max
+
+    def encode(self, value):
+        if value is None:
+            value = ''
         return str(value) + '\x00'
 
     def decode(self, buf, offset):
@@ -48,12 +52,22 @@ class NString(object):
         return buf[offset:pos], pos + 1
 
 
-class NStringDec(NString):
-    pass
+class Array(object):
+    def __init__(self, packet):
+        self.packet = packet
 
+    def encode(self, value):
+        result = ''
+        for v in value or []:
+            result += self.packet.encode(v)
+        return result, value and len(value) or 0
 
-class NStringHex(NString):
-    pass
+    def decode(self, buf, offset, size):
+        result = []
+        for _ in xrange(size):
+            value, offset = self.packet.decode(buf, offset)
+            result.append(value)
+        return result, offset
 
 
 int32 = Integer('!L')
@@ -64,68 +78,85 @@ int8 = Integer('!B')
 class Field(object):
     counter = 0
 
-    def __init__(self, type):
+    def __init__(self, type, name=None):
         self.type = type
         self.set_order()
+        self.name = name
 
     def set_order(self):
         self.order = Field.counter
         Field.counter += 1
 
     def decode(self, ctx, buf, offset):
-        return self.type.decode(buf, offset)
+        value, offset = self.type.decode(buf, offset)
+        ctx[self.name] = value
+        return offset
 
-    def prepare(self, ctx, value):
-        pass
-
-    def encode(self, value):
-        if value is None:
-            value = self.type.default
-        return self.type.encode(value)
+    def encode(self, ctx):
+        return self.type.encode(ctx.get(self.name))
 
 
-class VarField(Field):
-    def __init__(self, name, max):
-        self.name = name
-        self.max = max
+class SizeField(Field):
+    def __init__(self, length_field, type):
+        self.length_field = length_field
+        self.type = type
         self.set_order()
 
     def decode(self, ctx, buf, offset):
-        return String(ctx[self.name]).decode(buf, offset)
+        offset = self.length_field.decode(ctx, buf, offset)
+        size = ctx[self.length_field.name]
+        value, offset = self.type.decode(buf, offset, size)
+        ctx[self.name] = value
+        return offset
 
-    def prepare(self, ctx, value):
-        if value is None:
-            value = ''
-        ctx[self.name] = len(value)
+    def encode(self, ctx):
+        value, size = self.type.encode(ctx.get(self.name))
+        ctx[self.length_field.name] = size
+        return self.length_field.encode(ctx) + value
 
-    def encode(self, value):
-        if value is None:
-            value = ''
-        return str(value)
+
+class DispatchField(Field):
+    def __init__(self, type, mapping):
+        self.type = type
+        self.mapping = mapping
+        self.set_order()
+
+    def decode(self, ctx, buf, offset):
+        dval, offset = self.type.decode(buf, offset)
+        ctx[self.name] = dval
+        value, offset = self.mapping[dval].decode(buf, offset)
+        ctx.update(value)
+        return offset
+
+    def encode(self, ctx):
+        dval = ctx[self.name]
+        return self.type.encode(dval) + self.mapping[dval].encode(ctx)
+
+
+def with_name(field, name):
+    field.name = name
+    return field
 
 
 class PacketMeta(type):
     def __init__(cls, name, bases, fields):
-        fmt_fields = [(k, v) for k, v in fields.items() if isinstance(v, Field)]
-        cls.fields = sorted(fmt_fields, key=lambda r: r[1].order)
+        fmt_fields = [with_name(v, k) for k, v in fields.items() if isinstance(v, Field)]
+        cls.fields = sorted(fmt_fields, key=lambda r: r.order)
 
 
 class Packet(PacketMeta('PacketBase', (object,), {})):
     @classmethod
     def decode(cls, buf, offset=0):
         result = AttrDict()
-        for name, field in cls.fields:
-            result[name], offset = field.decode(result, buf, offset)
+        for field in cls.fields:
+            offset = field.decode(result, buf, offset)
 
         return result, offset
 
     @classmethod
     def encode(cls, data):
         result = ''
-        for name, field in cls.fields:
-            field.prepare(data, data.get(name))
-
-        for name, field in cls.fields:
-            result += field.encode(data.get(name))
+        for field in cls.fields:
+            result += field.encode(data)
 
         return result

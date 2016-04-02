@@ -1,5 +1,6 @@
 from . import tlv
-from .packet import Packet, NString, int8, Field, VarField, int32, AttrDict
+from .packet import (Packet, NString, int8, Field, Array, DispatchField,
+                     SizeField, int32, AttrDict, String)
 
 commands = {}
 
@@ -87,8 +88,7 @@ class Submit(Packet):
     replace_if_present_flag = Field(int8)
     data_coding = Field(int8)
     sm_default_msg_id = Field(int8)
-    sm_length = Field(int8)
-    short_message = VarField('sm_length', max=254)
+    short_message = SizeField(Field(int8, 'sm_length'), String(max=254))
 
 
 class SubmitResp(Packet):
@@ -169,9 +169,82 @@ class BindTransceiverResp(Command):
     body = BindResp
 
 
+class Outbind(Command):
+    command_id = 0x0000000B
+    class body(Packet):
+        system_id = Field(NString(max=16))
+        password = Field(NString(max=9))
+
+
 class EnquireLink(Command):
     command_id = 0x00000015
 
 
 class EnquireLinkResp(Command):
     command_id = 0x80000015
+
+
+class SMEAddr(Packet):
+    dest_addr_ton = Field(int8)
+    dest_addr_npi = Field(int8)
+    destination_addr = Field(NString(max=21))
+
+
+class DistributionList(Packet):
+    dl_name = Field(NString(max=21))
+
+
+class DestAddr(Packet):
+    dest_flag = DispatchField(int8, {
+        1: SMEAddr,
+        2: DistributionList
+    })
+
+
+class SubmitMulti(Command):
+    command_id = 0x00000021
+    class body(Packet):
+        service_type = Field(NString(max=6))
+        source_addr_ton = Field(int8)
+        source_addr_npi = Field(int8)
+        source_addr = Field(NString(max=21))
+        dest_address = SizeField(Field(int8, 'number_of_dests'),
+                                 Array(DestAddr))
+        ecm_class = Field(int8)
+        protocol_id = Field(int8)
+        priority_flag = Field(int8)
+        schedule_delivery_time = Field(NString(max=17))
+        validity_period = Field(NString(max=17))
+        registered_delivery = Field(int8)
+        replace_if_present_flag = Field(int8)
+        data_coding = Field(int8)
+        sm_default_msg_id = Field(int8)
+        short_message = SizeField(Field(int8, 'sm_length'), String(max=254))
+
+
+class UnsuccessDelivery(Packet):
+    dest_addr_ton = Field(int8)
+    dest_addr_npi = Field(int8)
+    destination_addr = Field(NString(max=21))
+    error_status_code = Field(int32)
+
+
+class SubmitMultiResp(Command):
+    command_id = 0x80000021
+
+    class body(Packet):
+        message_id = Field(NString(max=65))
+        unsuccess_sme = SizeField(Field(int8, 'no_unsuccess'),
+                                  Array(UnsuccessDelivery))
+
+
+class DataSM(Command):
+    command_id = 0x00000103
+    class body(Packet):
+        pass
+
+
+class DataSM(Command):
+    command_id = 0x80000103
+    class body(Packet):
+        pass

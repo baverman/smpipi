@@ -27,3 +27,10 @@ def test_tlv_encode():
 
     assert cmd.its_session_info == 'boo'
     assert cmd.ussd_service_op == '16'
+
+
+def test_size_field_encode():
+    cmd = SubmitSM(short_message='boo')
+    cmd = Command.decode(cmd.encode())
+    assert cmd.sm_length == 3
+    assert cmd.short_message == 'boo'
