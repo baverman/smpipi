@@ -140,9 +140,9 @@ def with_name(field, name):
 
 
 class PacketMeta(type):
-    def __init__(cls, name, bases, fields):
+    def __init__(self, name, bases, fields):
         fmt_fields = [with_name(v, k) for k, v in fields.items() if isinstance(v, Field)]
-        cls.fields = sorted(fmt_fields, key=lambda r: r.order)
+        self.fields = sorted(fmt_fields, key=lambda r: r.order)
 
 
 class Packet(PacketMeta('PacketBase', (object,), {})):
