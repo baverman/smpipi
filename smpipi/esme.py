@@ -1,5 +1,6 @@
 import logging
 import socket
+import time
 
 from . import command
 from .packet import int32
@@ -16,7 +17,7 @@ class ESME(object):
         self.sequence_number += 1
         return self.sequence_number
 
-    def read(self):
+    def _read(self):
         try:
             dlen = self._socket.recv(4)
         except socket.timeout:
@@ -36,6 +37,15 @@ class ESME(object):
                 pdu_log.debug('>> %s %r', pdu_hex, cmd)
 
             return cmd
+
+    def read(self, timeout=0):
+        start = time.time()
+        while True:
+            pdu = self._read()
+            if pdu or not timeout or time.time() - start >= timeout:
+                return pdu
+
+            time.sleep(1)
 
     def handle(self, cmd):
         cmd_type = type(cmd)
@@ -59,9 +69,9 @@ class ESME(object):
         if pdu:
             self.handle(pdu)
 
-    def send(self, cmd):
+    def send(self, cmd, timeout=60):
         self.send_async(cmd)
-        return self.read()
+        return self.read(timeout=timeout)
 
     def send_async(self, cmd):
         cmd.sequence_number = self.next_sequence()
