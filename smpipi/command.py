@@ -79,7 +79,7 @@ class Submit(Packet):
     dest_addr_ton = Field(int8)
     dest_addr_npi = Field(int8)
     destination_addr = Field(NString(max=21))
-    ecm_class = Field(int8)
+    esm_class = Field(int8)
     protocol_id = Field(int8)
     priority_flag = Field(int8)
     schedule_delivery_time = Field(NString(max=17))
