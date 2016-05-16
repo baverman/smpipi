@@ -52,7 +52,7 @@ class ESME(object):
     def handle(self, cmd):
         cmd_type = type(cmd)
         seq = {'sequence_number': cmd.sequence_number}
-        if cmd_type in command.EnquireLink:
+        if cmd_type is command.EnquireLink:
             self.last_enquire = time.time()
             self.reply(command.EnquireLinkResp(**seq))
         elif cmd_type is command.Unbind:
