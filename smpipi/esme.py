@@ -8,10 +8,12 @@ from .packet import int32
 pdu_log = logging.getLogger('smpipi.pdu')
 
 class ESME(object):
-    def __init__(self, host, port, timeout=10, handler=None):
+    def __init__(self, host, port, timeout=10, handler=None, enquire_timeout=300):
         self.sequence_number = 0
         self._socket = socket.create_connection((host, port), timeout=timeout)
         self.handler = handler
+        self.enquire_timeout = 300
+        self.last_enquire = time.time()
 
     def next_sequence(self):
         self.sequence_number += 1
@@ -50,7 +52,8 @@ class ESME(object):
     def handle(self, cmd):
         cmd_type = type(cmd)
         seq = {'sequence_number': cmd.sequence_number}
-        if cmd_type is command.EnquireLink:
+        if cmd_type in command.EnquireLink:
+            self.last_enquire = time.time()
             self.reply(command.EnquireLinkResp(**seq))
         elif cmd_type is command.Unbind:
             self.reply(command.UnbindResp(**seq))
@@ -68,6 +71,15 @@ class ESME(object):
         pdu = self.read()
         if pdu:
             self.handle(pdu)
+        else:
+            if self.last_enquire + self.enquire_timeout < time.time():
+                pdu = self.send(command.EnquireLink())
+                if pdu:
+                    self.last_enquire = time.time()
+                    if type(pdu) is not command.EnquireLinkResp:
+                        self.handle(pdu)
+                else:
+                    raise Exception('SMPP link broken: no response from SMSC')
 
     def send(self, cmd, timeout=60):
         self.send_async(cmd)
