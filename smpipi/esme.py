@@ -7,10 +7,13 @@ from .packet import int32
 
 pdu_log = logging.getLogger('smpipi.pdu')
 
+
 class ESME(object):
-    def __init__(self, host, port, timeout=10, handler=None, enquire_timeout=300):
+    def __init__(self, host, port, timeout=60, handler=None,
+                 enquire_timeout=300, conn_timeout=10):
         self.sequence_number = 0
-        self._socket = socket.create_connection((host, port), timeout=timeout)
+        self._socket = socket.create_connection((host, port), timeout=conn_timeout)
+        self._socket.settimeout(timeout)
         self.handler = handler
         self.enquire_timeout = 300
         self.last_enquire = time.time()
@@ -19,7 +22,7 @@ class ESME(object):
         self.sequence_number += 1
         return self.sequence_number
 
-    def _read(self):
+    def read(self):
         try:
             dlen = self._socket.recv(4)
         except socket.timeout:
@@ -39,15 +42,6 @@ class ESME(object):
                 pdu_log.debug('>> %s %r', pdu_hex, cmd)
 
             return cmd
-
-    def read(self, timeout=0):
-        start = time.time()
-        while True:
-            pdu = self._read()
-            if pdu or not timeout or time.time() - start >= timeout:
-                return pdu
-
-            time.sleep(1)
 
     def handle(self, cmd):
         cmd_type = type(cmd)
@@ -81,9 +75,9 @@ class ESME(object):
                 else:
                     raise Exception('SMPP link broken: no response from SMSC')
 
-    def send(self, cmd, timeout=60):
+    def send(self, cmd):
         self.send_async(cmd)
-        return self.read(timeout=timeout)
+        return self.read()
 
     def send_async(self, cmd):
         cmd.sequence_number = self.next_sequence()
