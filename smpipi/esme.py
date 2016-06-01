@@ -60,6 +60,8 @@ class ESME(object):
             self.reply(resp)
             if self.post_handler:
                 self.post_handler(result)
+        elif cmd_type is command.SubmitSMResp:
+            self.last_enquire = time.time()
         else:
             raise Exception('Unknown command: {}'.format(cmd))
 
