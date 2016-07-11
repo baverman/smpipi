@@ -1,4 +1,5 @@
 from smpipi.command import Command, EnquireLink, SubmitSM
+from smpipi import tlv
 
 
 def test_simple_command_decode():
@@ -22,11 +23,21 @@ def test_simple_encode():
 
 
 def test_tlv_encode():
-    cmd = SubmitSM(its_session_info='boo', ussd_service_op='16')
+    cmd = SubmitSM(its_session_info='boo', ussd_service_op='16',
+                   dest_addr_subunit='1', alert_on_message_delivery=True)
     cmd = Command.decode(cmd.encode())
 
     assert cmd.its_session_info == 'boo'
     assert cmd.ussd_service_op == '16'
+    assert cmd.dest_addr_subunit == 1
+    assert cmd.alert_on_message_delivery == ''
+
+
+def test_unknown_tlv():
+    data = tlv.encode({'dest_addr_subunit': '1'})
+    data = '\x42\x42' + data[2:]
+    result, _ = tlv.decode(data, 0)
+    assert result == {'_tag_0x4242': '\x01'}
 
 
 def test_size_field_encode():
