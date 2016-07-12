@@ -1,5 +1,8 @@
 import pytest
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
 
 from smpipi import command
 from smpipi.esme import ESME, UnknownCommand, BrokenLink
@@ -9,7 +12,7 @@ from smpipi.packet import AttrDict
 class DummySocket(object):
     def __init__(self, *packets):
         self.packets = list(packets)
-        self.rdata = StringIO('')
+        self.rdata = StringIO(b'')
         self.input = []
         self.closed = False
 
@@ -36,8 +39,8 @@ def test_bind():
         resp = getattr(esme, cmd)('sys', 'pwd')
         assert resp.command_id == command.BindReceiverResp.command_id
         req = command.Command.decode(esme._socket.input[0])
-        assert req.system_id == 'sys'
-        assert req.password == 'pwd'
+        assert req.system_id == b'sys'
+        assert req.password == b'pwd'
         esme.close()
         assert esme._socket.closed
 
@@ -47,7 +50,7 @@ def test_send_message():
     resp = esme.send_message(short_message='boo')
     assert resp.command_id == command.SubmitSMResp.command_id
     req = command.Command.decode(esme._socket.input[0])
-    assert req.short_message == 'boo'
+    assert req.short_message == b'boo'
 
 
 def test_listen_session():
@@ -100,9 +103,9 @@ def test_unknown_command():
 
 
 def test_empty_read():
-    esme = ESME(None, None, connection=DummySocket('', command.EnquireLinkResp(),
-                                                   '', '',
-                                                   '', command.SubmitSMResp()))
+    esme = ESME(None, None, connection=DummySocket(b'', command.EnquireLinkResp(),
+                                                   b'', b'',
+                                                   b'', command.SubmitSMResp()))
 
     esme.last_enquire = 0
     esme.listen()

@@ -38,7 +38,7 @@ class Command(CommandMeta('CommandBase', (AttrDict,), {})):
         return cmd(**result)
 
     def encode(self):
-        body = ''
+        body = b''
         cmd = self.__class__
         if hasattr(cmd, 'body'):
             body = cmd.body.encode(self)

@@ -1,4 +1,5 @@
 from struct import Struct
+from .compat import bytestr, range
 
 
 class AttrDict(dict):
@@ -30,7 +31,7 @@ class String(object):
         if value is None:
             value = ''
 
-        value = str(value)
+        value = bytestr(value)
         return value, len(value)
 
     def decode(self, buf, offset, size):
@@ -44,10 +45,10 @@ class NString(object):
     def encode(self, value):
         if value is None:
             value = ''
-        return str(value) + '\x00'
+        return bytestr(value) + b'\x00'
 
     def decode(self, buf, offset):
-        pos = buf.find('\x00', offset, offset+self.max)
+        pos = buf.find(b'\x00', offset, offset+self.max)
         assert pos >= 0
         return buf[offset:pos], pos + 1
 
@@ -57,14 +58,14 @@ class Array(object):
         self.packet = packet
 
     def encode(self, value):
-        result = ''
+        result = b''
         for v in value or []:
             result += self.packet.encode(v)
         return result, value and len(value) or 0
 
     def decode(self, buf, offset, size):
         result = []
-        for _ in xrange(size):
+        for _ in range(size):
             value, offset = self.packet.decode(buf, offset)
             result.append(value)
         return result, offset
@@ -155,7 +156,7 @@ class Packet(PacketMeta('PacketBase', (object,), {})):
 
     @classmethod
     def encode(cls, data):
-        result = ''
+        result = b''
         for field in cls.fields:
             result += field.encode(data)
 

@@ -1,5 +1,6 @@
 from struct import Struct
 from .packet import int8, int16, int32
+from .compat import bytestr
 
 tlv_struct = Struct('!HH')
 
@@ -30,7 +31,7 @@ class StrField(object):
         return value
 
     def encode(self, value):
-        return str(value)
+        return bytestr(value)
 
 
 class EmptyField(object):
@@ -41,7 +42,7 @@ class EmptyField(object):
         return ''
 
     def encode(self, value):
-        return ''
+        return b''
 
 
 NStrField = StrField
@@ -119,7 +120,7 @@ def decode(buf, offset):
 
 
 def encode(data):
-    result = ''
+    result = b''
     for k, v in data.items():
         if k in names:
             tag, field = names[k]

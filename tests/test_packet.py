@@ -3,24 +3,24 @@ from smpipi.packet import (NString, int8, int16, int32, String,
 
 
 def test_nstring():
-    buf = '123\x003456\x00'
+    buf = b'123\x003456\x00'
     result, offset = NString(max=4).decode(buf, 0)
-    assert result == '123'
+    assert result == b'123'
 
     result, offset = NString(max=5).decode(buf, offset)
-    assert result == '3456'
+    assert result == b'3456'
     assert offset == 9
 
-    assert NString(max=10).encode('boo') == 'boo\x00'
+    assert NString(max=10).encode('boo') == b'boo\x00'
 
 
 def test_string():
-    buf = '1233456'
+    buf = b'1233456'
     result, offset = String(10).decode(buf, 0, 3)
-    assert result == '123'
+    assert result == b'123'
 
     result, offset = String(10).decode(buf, offset, 4)
-    assert result == '3456'
+    assert result == b'3456'
     assert offset == 7
 
 
@@ -45,7 +45,7 @@ def test_size_field():
     payload = Body.encode({'boo': 'bar'})
     data, _ = Body.decode(payload)
     assert data == {
-        'boo': 'bar',
+        'boo': b'bar',
         'boo_len': 3
     }
 
@@ -84,4 +84,4 @@ def test_dispatch():
 
     payload = Body.encode({'flag': 2, 'boo': 'foobar'})
     data, _ = Body.decode(payload)
-    assert data == {'flag': 2, 'boo': 'foobar'}
+    assert data == {'flag': 2, 'boo': b'foobar'}
