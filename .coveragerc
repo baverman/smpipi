@@ -1,0 +1,2 @@
+[run]
+omit=smpipi/tornado.py

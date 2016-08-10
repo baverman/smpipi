@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name     = 'smpipi',
-    version  = '0.1',
+    version  = '0.5',
     author   = 'Anton Bobrov',
     author_email = 'bobrov@vl.ru',
     description = 'Simple, flexible and non-restrictive SMPP client',
