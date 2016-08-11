@@ -10,7 +10,7 @@ from smpipi.simple import ESME, Timeout
 @pytest.fixture(scope='module')
 def smsc(request):
     p = Popen([sys.executable, '-m', 'smpipi.tornado', '30001'])
-    time.sleep(5)
+    time.sleep(3)
     request.addfinalizer(p.kill)
 
 
